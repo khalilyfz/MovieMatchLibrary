@@ -1,33 +1,27 @@
- import {
+import React, { useState } from "react";
+import {
+  IonAvatar,
   IonButton,
   IonCheckbox,
   IonContent,
+  IonIcon,
   IonInput,
   IonInputPasswordToggle,
   IonLabel,
   IonPage,
-} from '@ionic/react';
-import './Details.css';
-import { handleSignup } from '../auth/userAuth';
-import { useState } from 'react';
+} from "@ionic/react";
+import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+import { cameraOutline } from "ionicons/icons";
 import { useNavigate } from "react-router-dom";
-
+import { handleSignup } from "../auth/userAuth";
 
 const IsValidEmail = (email: string): boolean => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 };
 
-const HasUppercase = (str: string): boolean => {
-  return /[A-Z]/.test(str);
-};
-
-const HasNumber = (str: string): boolean => {
-  return /[0-9]/.test(str);
-};
-
-const HasSymbol = (str: string): boolean => {
-  return /[^A-Za-z0-9]/.test(str);
-};
+const HasUppercase = (str: string): boolean => /[A-Z]/.test(str);
+const HasNumber = (str: string): boolean => /[0-9]/.test(str);
+const HasSymbol = (str: string): boolean => /[^A-Za-z0-9]/.test(str);
 
 const IsValidPassword = (pswd: string): boolean => {
   return (
@@ -44,50 +38,60 @@ const IsValidName = (name: string): boolean => {
 
 const IsValidDOB = (dob: string): boolean => {
   if (!dob) return false;
-
   const date = new Date(dob);
   const today = new Date();
-
   return !isNaN(date.getTime()) && date <= today;
 };
 
 const GetAge = (dob: string): number => {
   const birthDate = new Date(dob);
   const today = new Date();
-
   let age = today.getFullYear() - birthDate.getFullYear();
-
-  const hasHadBirthday =
-    today.getMonth() > birthDate.getMonth() ||
-    (today.getMonth() === birthDate.getMonth() &&
-      today.getDate() >= birthDate.getDate());
-
-  if (!hasHadBirthday) {
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
     age--;
   }
-
   return age;
 };
-
-const IsOldEnough = (dob: string, minimumAge: number): boolean => {
-  return GetAge(dob) >= minimumAge;
-};
-
-
-
 
 const Signup: React.FC = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [dob, setDob] = useState("");
+  const [photo, setPhoto] = useState("");
   const [email, setEmail] = useState("");
   const [pswd, setPswd] = useState("");
   const [confPswd, setConfPswd] = useState("");
   const [stayLoggedIn, setStayLoggedIn] = useState(true);
   const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const takePhoto = async () => {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 60,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+        width: 360,
+        height: 360,
+      });
+
+      if (image.dataUrl) {
+        setPhoto(image.dataUrl);
+      }
+    } catch (error: any) {
+      console.log("Camera dismissed or cancelled:", error);
+    }
+  };
+
   const validateSignup = (): boolean => {
+    if (!photo) {
+      setErr("Profile photo taken with the camera is required");
+      return false;
+    }
+
     if (!firstName.trim() || !lastName.trim()) {
       setErr("First and last name are required");
       return false;
@@ -120,7 +124,7 @@ const Signup: React.FC = () => {
       return false;
     }
 
-    if (!IsOldEnough(dob, 13)) {
+    if (GetAge(dob) < 13) {
       setErr("You must be at least 13 years old");
       return false;
     }
@@ -130,43 +134,127 @@ const Signup: React.FC = () => {
 
   const signup = async () => {
     setErr("");
+    if (!validateSignup()) return;
 
-    if (!validateSignup()) {
-      return;
-    }
-
+    setLoading(true);
     try {
-      await handleSignup(email, pswd, firstName, lastName, dob, stayLoggedIn);
-      navigate('/home');
+      await handleSignup(
+        email,
+        pswd,
+        firstName,
+        lastName,
+        dob,
+        photo,
+        stayLoggedIn
+      );
+      navigate("/home");
     } catch (error: any) {
-      setErr(error.message);
+      setErr(error.message || "Failed to create account");
+    } finally {
+      setLoading(false);
     }
   };
 
-
   return (
     <IonPage>
-      <IonContent fullscreen >
-        <IonInput type='text' label='First Name' onIonInput={(e) => setFirstName(e.detail.value ?? "")} />
-        <IonInput type='text' label='Last Name' onIonInput={(e) => setLastName(e.detail.value ?? "")} />
-        <IonInput type='date' label='Date of birth' onIonInput={(e) => setDob(e.detail.value ?? "")} />
-        <IonInput type='email' label='Email Adress' onIonInput={(e) => setEmail(e.detail.value ?? "")} />
-        <IonInput type='password' label='Password' onIonInput={(e) => setPswd(e.detail.value ?? "")} >
-          <IonInputPasswordToggle slot='end' />
+      <IonContent fullscreen className="ion-padding">
+        {/* Camera Photo Picker */}
+        <div style={{ textAlign: "center", margin: "1.5rem 0 1rem" }}>
+          <IonAvatar
+            style={{
+              width: "110px",
+              height: "110px",
+              margin: "0 auto 10px",
+              border: "3px solid var(--ion-color-primary)",
+            }}
+          >
+            {photo ? (
+              <img src={photo} alt="Avatar Preview" />
+            ) : (
+              <div
+                style={{
+                  backgroundColor: "var(--ion-color-step-200)",
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "2.5rem",
+                }}
+              >
+                👤
+              </div>
+            )}
+          </IonAvatar>
+
+          <IonButton fill="outline" size="small" onClick={takePhoto}>
+            <IonIcon slot="start" icon={cameraOutline} />
+            {photo ? "Retake Photo" : "Take Profile Photo"}
+          </IonButton>
+        </div>
+
+        <IonInput
+          type="text"
+          label="First Name"
+          labelPlacement="floating"
+          onIonInput={(e) => setFirstName(e.detail.value ?? "")}
+        />
+        <IonInput
+          type="text"
+          label="Last Name"
+          labelPlacement="floating"
+          onIonInput={(e) => setLastName(e.detail.value ?? "")}
+        />
+        <IonInput
+          type="date"
+          label="Date of birth"
+          labelPlacement="floating"
+          onIonInput={(e) => setDob(e.detail.value ?? "")}
+        />
+        <IonInput
+          type="email"
+          label="Email Address"
+          labelPlacement="floating"
+          onIonInput={(e) => setEmail(e.detail.value ?? "")}
+        />
+        <IonInput
+          type="password"
+          label="Password"
+          labelPlacement="floating"
+          onIonInput={(e) => setPswd(e.detail.value ?? "")}
+        >
+          <IonInputPasswordToggle slot="end" />
         </IonInput>
-        <IonInput type='password' label='Confirm Password' onIonInput={(e) => setConfPswd(e.detail.value ?? "")} >
-          <IonInputPasswordToggle slot='end' />
+        <IonInput
+          type="password"
+          label="Confirm Password"
+          labelPlacement="floating"
+          onIonInput={(e) => setConfPswd(e.detail.value ?? "")}
+        >
+          <IonInputPasswordToggle slot="end" />
         </IonInput>
-        <div>
+
+        <div style={{ display: "flex", alignItems: "center", margin: "1rem 0" }}>
           <IonCheckbox
             checked={stayLoggedIn}
             onIonChange={(e) => setStayLoggedIn(Boolean(e.detail.checked))}
           />
-          <IonLabel>Stay logged in</IonLabel>
+          <IonLabel style={{ marginLeft: "8px" }}>Stay logged in</IonLabel>
         </div>
-        {err && <p>{err}</p>}
-        <IonButton onClick={signup}>Signup</IonButton>
-        <IonButton onClick={() => navigate("/login")}>I already have an account</IonButton>
+
+        {err && <p style={{ color: "var(--ion-color-danger)" }}>{err}</p>}
+
+        <IonButton expand="block" onClick={signup} disabled={loading}>
+          {loading ? "Creating Account..." : "Signup"}
+        </IonButton>
+
+        <IonButton
+          expand="block"
+          fill="clear"
+          onClick={() => navigate("/login")}
+        >
+          I already have an account
+        </IonButton>
       </IonContent>
     </IonPage>
   );

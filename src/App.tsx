@@ -34,12 +34,14 @@ import "./theme/variables.css";
 import { home, heart, star, person } from "ionicons/icons";
 import Logout from "./auth/Logout";
 import Profile from "./pages/Profile";
+import Favorites from "./pages/Favorites";
+import Matches from "./pages/Matches";
 
 setupIonicReact();
 
 const App: React.FC = () => {
   const { user, loading } = useAuth();
-  
+
 
   if (loading) {
     return null;
@@ -63,6 +65,31 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <Details />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/favorites"
+              element={
+                <ProtectedRoute>
+                  <Favorites />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/matches"
+              element={
+                <ProtectedRoute>
+                  <Matches />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               }
             />
@@ -106,11 +133,11 @@ const App: React.FC = () => {
                 <IonIcon icon={home} />
               </IonTabButton>
 
-              <IonTabButton tab="favorites" href="/details">
+              <IonTabButton tab="favorites" href="/favorites">
                 <IonIcon icon={heart} />
               </IonTabButton>
 
-              <IonTabButton tab="matches" href="/home">
+              <IonTabButton tab="matches" href="/matches">
                 <IonIcon icon={star} />
               </IonTabButton>
 

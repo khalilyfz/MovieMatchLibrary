@@ -34,7 +34,7 @@ import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { calculateAge } from "../auth/userAuth";
 
-const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY || "YOUR_TMDB_API_KEY";
+const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY || "a586ab7a154ede644e21b89309ed264a";
 
 export type Movie = {
   tmdbid: string;
